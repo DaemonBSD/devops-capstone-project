@@ -57,32 +57,42 @@ def create_accounts():
         jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
     )
 
-######################################################################
-# LIST ALL ACCOUNTS
-######################################################################
+# LIST
+@app.route("/accounts", methods=["GET"])
+def list_accounts():
+    items = [a.serialize() for a in Account.all()]  # serialize cada objeto
+    return jsonify(items), status.HTTP_200_OK
 
-# ... place you code here to LIST accounts ...
+# READ
+@app.route("/accounts/<int:account_id>", methods=["GET"])
+def read_account(account_id: int):
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    return account.serialize(), status.HTTP_200_OK
 
+# UPDATE
+@app.route("/accounts/<int:account_id>", methods=["PUT"])
+def update_account(account_id: int):
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    if not request.is_json:
+        abort(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Content-Type must be application/json")
+    data = request.get_json() or {}
+    # seu deserialize EXIGE name, email e address no payload
+    account.deserialize(data)
+    account.update()
+    return account.serialize(), status.HTTP_200_OK
 
-######################################################################
-# READ AN ACCOUNT
-######################################################################
+# DELETE
+@app.route("/accounts/<int:account_id>", methods=["DELETE"])
+def delete_account(account_id: int):
+    account = Account.find(account_id)
+    if account:
+        account.delete()
+    return "", status.HTTP_204_NO_CONTENT
 
-# ... place you code here to READ an account ...
-
-
-######################################################################
-# UPDATE AN EXISTING ACCOUNT
-######################################################################
-
-# ... place you code here to UPDATE an account ...
-
-
-######################################################################
-# DELETE AN ACCOUNT
-######################################################################
-
-# ... place you code here to DELETE an account ...
 
 
 ######################################################################
