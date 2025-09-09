@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app: accounts
   name: accounts
@@ -13,13 +12,12 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: accounts
     spec:
       containers:
-      - image: us.icr.io/sn-labs-candrecosta/accounts:1
-        name: accounts
+      - name: accounts
+        image: 
         resources: {}
         env:
           - name: DATABASE_HOST
@@ -39,5 +37,3 @@ spec:
               secretKeyRef:
                 name: postgresql
                 key: database-user
-
-status: {}
