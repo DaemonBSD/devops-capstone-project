@@ -1,6 +1,7 @@
 from service.common import status
 from service import app
 from service.models import db, Account
+from service import talisman
 
 BASE_URL = "/accounts"
 
@@ -9,6 +10,7 @@ class TestAccountsREST:
         self.client = app.test_client()
         with app.app_context():
             db.create_all()
+        talisman.force_https = False
 
     def tearDown(self):
         with app.app_context():
