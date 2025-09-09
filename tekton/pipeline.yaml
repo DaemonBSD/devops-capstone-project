@@ -2,11 +2,13 @@
 # This pipeline needs the following tasks from Tekton Hub
 #   - git-clone
 #   - flake8
+#   - buildah        (ClusterTask)
+#   - openshift-client (ClusterTask)
 #
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
-metadata:  
+metadata:
   name: cd-pipeline
 spec:
   workspaces:
@@ -15,6 +17,8 @@ spec:
     - name: repo-url
     - name: branch
       default: main
+    - name: build-image
+      description: Full image tag to build and push (e.g., us.icr.io/namespace/accounts:1)
   tasks:
     - name: init
       workspaces:
@@ -46,7 +50,7 @@ spec:
       params:
         - name: image
           value: "python:3.9-slim"
-        - name: path        
+        - name: path
           value: service
         - name: args
           value:
@@ -56,7 +60,7 @@ spec:
             - "--statistics"
       runAfter:
         - clone
-    
+
     - name: tests
       workspaces:
         - name: source
@@ -70,3 +74,42 @@ spec:
           value: "-v --with-spec --spec-color"
       runAfter:
         - clone
+
+    # Build container image with Buildah (ClusterTask)
+    - name: build
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: $(params.build-image)
+        - name: DOCKERFILE
+          value: ./Dockerfile
+        - name: CONTEXT
+          value: .
+      runAfter:
+        - lint
+        - tests
+
+    # Deploy manifests with OpenShift client (ClusterTask)
+    - name: deploy
+      workspaces:
+        - name: manifest-dir
+          workspace: pipeline-workspace
+      taskRef:
+        name: openshift-client
+        kind: ClusterTask
+      params:
+        - name: SCRIPT
+          value: |
+            echo "Updating manifest..."
+            sed -i "s|IMAGE_NAME_HERE|$(params.build-image)|g" deploy/deployment.yaml
+            cat deploy/deployment.yaml
+            echo "Deploying to OpenShift..."
+            oc apply -f deploy/
+            oc get pods -l app=accounts
+      runAfter:
+        - build
